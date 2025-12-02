@@ -1,13 +1,13 @@
 {
   "name": "@yilin-jing/producthunt-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for Product Hunt API v2 - Access Product Hunt data through GraphQL interface",
   "author": "yilin",
   "license": "MIT",
   "main": "build/index.js",
   "type": "commonjs",
   "bin": {
-    "producthunt-mcp": "./build/index.js"
+    "producthunt-mcp": "build/index.js"
   },
   "scripts": {
     "build": "tsc && chmod +x build/index.js",
