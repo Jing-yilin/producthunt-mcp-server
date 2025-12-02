@@ -1,0 +1,63 @@
+{
+  "name": "@yilin-jing/producthunt-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Product Hunt API v2 - Access Product Hunt data through GraphQL interface",
+  "author": "yilin",
+  "license": "MIT",
+  "main": "build/index.js",
+  "type": "commonjs",
+  "bin": {
+    "producthunt-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x build/index.js",
+    "dev": "npm run build && node build/index.js",
+    "prepare": "npm run build",
+    "test": "bun test",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "build/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "server",
+    "producthunt",
+    "product-hunt",
+    "api",
+    "graphql",
+    "claude",
+    "llm",
+    "model-context-protocol",
+    "posts",
+    "products",
+    "startups",
+    "npx"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.2",
+    "axios": "^1.11.0",
+    "https-proxy-agent": "^7.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jing-yilin/producthunt-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Jing-yilin/producthunt-mcp-server/issues"
+  },
+  "homepage": "https://github.com/Jing-yilin/producthunt-mcp-server#readme"
+}
