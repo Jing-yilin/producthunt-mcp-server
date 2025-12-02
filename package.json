@@ -1,6 +1,6 @@
 {
   "name": "@yilin-jing/producthunt-mcp",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "MCP server for Product Hunt API v2 - Access Product Hunt data through GraphQL interface",
   "author": "yilin",
   "license": "MIT",
