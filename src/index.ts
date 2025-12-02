@@ -236,6 +236,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: [],
             },
@@ -280,6 +285,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: [],
             },
@@ -307,6 +317,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: ['query'],
             },
@@ -326,6 +341,11 @@ class ProductHuntAPIMCPServer {
                 raw_data_save_dir: {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
                 },
               },
               required: ['id'],
@@ -367,6 +387,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: [],
             },
@@ -390,6 +415,11 @@ class ProductHuntAPIMCPServer {
                 raw_data_save_dir: {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
                 },
               },
               required: [],
@@ -418,6 +448,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: ['username'],
             },
@@ -445,6 +480,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: ['username'],
             },
@@ -468,6 +508,11 @@ class ProductHuntAPIMCPServer {
                 raw_data_save_dir: {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
                 },
               },
               required: [],
@@ -501,6 +546,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: [],
             },
@@ -520,6 +570,11 @@ class ProductHuntAPIMCPServer {
                 raw_data_save_dir: {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
                 },
               },
               required: ['id'],
@@ -557,6 +612,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: [],
             },
@@ -576,6 +636,11 @@ class ProductHuntAPIMCPServer {
                 raw_data_save_dir: {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
                 },
               },
               required: ['id'],
@@ -617,6 +682,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: [],
             },
@@ -636,6 +706,11 @@ class ProductHuntAPIMCPServer {
                 raw_data_save_dir: {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
                 },
               },
               required: ['id'],
@@ -669,6 +744,11 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
+                },
               },
               required: [],
             },
@@ -684,6 +764,11 @@ class ProductHuntAPIMCPServer {
                 raw_data_save_dir: {
                   type: 'string',
                   description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+                max_items: {
+                  type: 'integer',
+                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
+                  default: 3,
                 },
               },
               required: [],
@@ -808,13 +893,13 @@ class ProductHuntAPIMCPServer {
     }
   }
 
-  // JSON response handler for formatting and limiting responses
-  private jsonHandler = new JsonResponseHandler({ maxItemsForContext: 10 });
+  // JSON response handler for formatting and limiting responses (default: 3 items)
+  private jsonHandler = new JsonResponseHandler();
 
   /**
    * Format response using the JSON handler
    */
-  private formatResponse(data: any, options?: { rawDataSaveDir?: string; toolName?: string; params?: Record<string, any> }): CallToolResult {
+  private formatResponse(data: any, options?: { rawDataSaveDir?: string; toolName?: string; params?: Record<string, any>; maxItems?: number }): CallToolResult {
     return this.jsonHandler.formatResponse(data, options);
   }
 
@@ -876,6 +961,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.post, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_post',
       params: args,
     });
@@ -939,6 +1025,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.posts, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_posts',
       params: args,
     });
@@ -1005,6 +1092,7 @@ class ProductHuntAPIMCPServer {
       searchQuery: args.query,
     }, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'search_posts',
       params: args,
     });
@@ -1051,6 +1139,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.collection, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_collection',
       params: args,
     });
@@ -1098,6 +1187,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.collections, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_collections',
       params: args,
     });
@@ -1140,6 +1230,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.user, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_user',
       params: args,
     });
@@ -1187,6 +1278,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.user, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_user_posts',
       params: args,
     });
@@ -1234,6 +1326,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.user, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_user_voted_posts',
       params: args,
     });
@@ -1265,6 +1358,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.topic, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_topic',
       params: args,
     });
@@ -1305,6 +1399,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.topics, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_topics',
       params: args,
     });
@@ -1335,6 +1430,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.comment, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_comment',
       params: args,
     });
@@ -1390,6 +1486,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.post, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_post_comments',
       params: args,
     });
@@ -1428,6 +1525,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.goal, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_goal',
       params: args,
     });
@@ -1480,6 +1578,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.goals, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_goals',
       params: args,
     });
@@ -1505,6 +1604,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.makerGroup, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_maker_group',
       params: args,
     });
@@ -1546,6 +1646,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.makerGroups, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_maker_groups',
       params: args,
     });
@@ -1591,6 +1692,7 @@ class ProductHuntAPIMCPServer {
 
     return this.formatResponse(data.viewer, {
       rawDataSaveDir: args.raw_data_save_dir,
+      maxItems: args.max_items,
       toolName: 'get_viewer',
       params: args,
     });
