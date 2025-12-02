@@ -12,6 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { JsonResponseHandler } from './jsonUtils.js';
 
 /**
  * Interface definitions for Product Hunt GraphQL API responses
@@ -59,11 +60,10 @@ interface ProductHuntPost {
 
 interface ProductHuntCollection {
   id: string;
-  slug: string;
   name: string;
   description?: string;
   followersCount: number;
-  postsCount: number;
+  postsCount?: number;
   coverImage?: string;
   createdAt: string;
   user?: {
@@ -232,6 +232,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Post slug (URL-friendly name)',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: [],
             },
@@ -272,6 +276,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination (endCursor from previous response)',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: [],
             },
@@ -295,6 +303,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: ['query'],
             },
@@ -303,7 +315,7 @@ class ProductHuntAPIMCPServer {
           // Collection endpoints
           {
             name: 'get_collection',
-            description: 'Get a Product Hunt collection by ID or slug',
+            description: 'Get a Product Hunt collection by ID',
             inputSchema: {
               type: 'object',
               properties: {
@@ -311,12 +323,12 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Collection ID',
                 },
-                slug: {
+                raw_data_save_dir: {
                   type: 'string',
-                  description: 'Collection slug',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
               },
-              required: [],
+              required: ['id'],
             },
           } as Tool,
           {
@@ -351,6 +363,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: [],
             },
@@ -370,6 +386,10 @@ class ProductHuntAPIMCPServer {
                 username: {
                   type: 'string',
                   description: 'Username',
+                },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
               },
               required: [],
@@ -394,6 +414,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: ['username'],
             },
@@ -417,6 +441,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: ['username'],
             },
@@ -436,6 +464,10 @@ class ProductHuntAPIMCPServer {
                 slug: {
                   type: 'string',
                   description: 'Topic slug',
+                },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
               },
               required: [],
@@ -465,6 +497,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: [],
             },
@@ -480,6 +516,10 @@ class ProductHuntAPIMCPServer {
                 id: {
                   type: 'string',
                   description: 'Comment ID',
+                },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
               },
               required: ['id'],
@@ -513,6 +553,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: [],
             },
@@ -528,6 +572,10 @@ class ProductHuntAPIMCPServer {
                 id: {
                   type: 'string',
                   description: 'Goal ID',
+                },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
               },
               required: ['id'],
@@ -565,6 +613,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: [],
             },
@@ -580,6 +632,10 @@ class ProductHuntAPIMCPServer {
                 id: {
                   type: 'string',
                   description: 'Maker Group ID',
+                },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
                 },
               },
               required: ['id'],
@@ -609,6 +665,10 @@ class ProductHuntAPIMCPServer {
                   type: 'string',
                   description: 'Cursor for pagination',
                 },
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
               },
               required: [],
             },
@@ -620,7 +680,12 @@ class ProductHuntAPIMCPServer {
             description: 'Get the authenticated user information and their data',
             inputSchema: {
               type: 'object',
-              properties: {},
+              properties: {
+                raw_data_save_dir: {
+                  type: 'string',
+                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
+                },
+              },
               required: [],
             },
           } as Tool,
@@ -667,25 +732,25 @@ class ProductHuntAPIMCPServer {
 
           // Comment endpoints
           case 'get_comment':
-            return await this.getComment(args.id as string);
+            return await this.getComment(args as Record<string, any>);
           case 'get_post_comments':
             return await this.getPostComments(args as Record<string, any>);
 
           // Goal endpoints
           case 'get_goal':
-            return await this.getGoal(args.id as string);
+            return await this.getGoal(args as Record<string, any>);
           case 'get_goals':
             return await this.getGoals(args as Record<string, any>);
 
           // Maker Group endpoints
           case 'get_maker_group':
-            return await this.getMakerGroup(args.id as string);
+            return await this.getMakerGroup(args as Record<string, any>);
           case 'get_maker_groups':
             return await this.getMakerGroups(args as Record<string, any>);
 
           // Viewer endpoint
           case 'get_viewer':
-            return await this.getViewer();
+            return await this.getViewer(args as Record<string, any>);
 
           default:
             throw new McpError(
@@ -743,15 +808,14 @@ class ProductHuntAPIMCPServer {
     }
   }
 
-  private formatResponse(data: any): CallToolResult {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(data, null, 2),
-        },
-      ],
-    };
+  // JSON response handler for formatting and limiting responses
+  private jsonHandler = new JsonResponseHandler({ maxItemsForContext: 10 });
+
+  /**
+   * Format response using the JSON handler
+   */
+  private formatResponse(data: any, options?: { rawDataSaveDir?: string; toolName?: string; params?: Record<string, any> }): CallToolResult {
+    return this.jsonHandler.formatResponse(data, options);
   }
 
   // Post methods
@@ -810,7 +874,11 @@ class ProductHuntAPIMCPServer {
       slug: args.slug,
     });
 
-    return this.formatResponse(data.post);
+    return this.formatResponse(data.post, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_post',
+      params: args,
+    });
   }
 
   private async getPosts(args: Record<string, any>): Promise<CallToolResult> {
@@ -869,7 +937,11 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.posts);
+    return this.formatResponse(data.posts, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_posts',
+      params: args,
+    });
   }
 
   private async searchPosts(args: Record<string, any>): Promise<CallToolResult> {
@@ -931,20 +1003,23 @@ class ProductHuntAPIMCPServer {
       ...data.posts,
       edges: filteredEdges,
       searchQuery: args.query,
+    }, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'search_posts',
+      params: args,
     });
   }
 
   // Collection methods
   private async getCollection(args: Record<string, any>): Promise<CallToolResult> {
-    if (!args.id && !args.slug) {
-      throw new Error('At least one of id or slug is required');
+    if (!args.id) {
+      throw new Error('Collection ID is required');
     }
 
     const query = `
-      query GetCollection($id: ID, $slug: String) {
-        collection(id: $id, slug: $slug) {
+      query GetCollection($id: ID) {
+        collection(id: $id) {
           id
-          slug
           name
           description
           followersCount
@@ -972,10 +1047,13 @@ class ProductHuntAPIMCPServer {
 
     const data = await this.executeGraphQL<{ collection: ProductHuntCollection }>(query, {
       id: args.id,
-      slug: args.slug,
     });
 
-    return this.formatResponse(data.collection);
+    return this.formatResponse(data.collection, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_collection',
+      params: args,
+    });
   }
 
   private async getCollections(args: Record<string, any>): Promise<CallToolResult> {
@@ -986,7 +1064,6 @@ class ProductHuntAPIMCPServer {
             cursor
             node {
               id
-              slug
               name
               description
               followersCount
@@ -1019,7 +1096,11 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.collections);
+    return this.formatResponse(data.collections, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_collections',
+      params: args,
+    });
   }
 
   // User methods
@@ -1057,7 +1138,11 @@ class ProductHuntAPIMCPServer {
       username: args.username,
     });
 
-    return this.formatResponse(data.user);
+    return this.formatResponse(data.user, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_user',
+      params: args,
+    });
   }
 
   private async getUserPosts(args: Record<string, any>): Promise<CallToolResult> {
@@ -1100,7 +1185,11 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.user);
+    return this.formatResponse(data.user, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_user_posts',
+      params: args,
+    });
   }
 
   private async getUserVotedPosts(args: Record<string, any>): Promise<CallToolResult> {
@@ -1143,7 +1232,11 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.user);
+    return this.formatResponse(data.user, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_user_voted_posts',
+      params: args,
+    });
   }
 
   // Topic methods
@@ -1170,7 +1263,11 @@ class ProductHuntAPIMCPServer {
       slug: args.slug,
     });
 
-    return this.formatResponse(data.topic);
+    return this.formatResponse(data.topic, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_topic',
+      params: args,
+    });
   }
 
   private async getTopics(args: Record<string, any>): Promise<CallToolResult> {
@@ -1206,11 +1303,15 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.topics);
+    return this.formatResponse(data.topics, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_topics',
+      params: args,
+    });
   }
 
   // Comment methods
-  private async getComment(id: string): Promise<CallToolResult> {
+  private async getComment(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
       query GetComment($id: ID!) {
         comment(id: $id) {
@@ -1230,9 +1331,13 @@ class ProductHuntAPIMCPServer {
       }
     `;
 
-    const data = await this.executeGraphQL<{ comment: ProductHuntComment }>(query, { id });
+    const data = await this.executeGraphQL<{ comment: ProductHuntComment }>(query, { id: args.id });
 
-    return this.formatResponse(data.comment);
+    return this.formatResponse(data.comment, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_comment',
+      params: args,
+    });
   }
 
   private async getPostComments(args: Record<string, any>): Promise<CallToolResult> {
@@ -1283,11 +1388,15 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.post);
+    return this.formatResponse(data.post, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_post_comments',
+      params: args,
+    });
   }
 
   // Goal methods
-  private async getGoal(id: string): Promise<CallToolResult> {
+  private async getGoal(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
       query GetGoal($id: ID!) {
         goal(id: $id) {
@@ -1315,9 +1424,13 @@ class ProductHuntAPIMCPServer {
       }
     `;
 
-    const data = await this.executeGraphQL<{ goal: ProductHuntGoal }>(query, { id });
+    const data = await this.executeGraphQL<{ goal: ProductHuntGoal }>(query, { id: args.id });
 
-    return this.formatResponse(data.goal);
+    return this.formatResponse(data.goal, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_goal',
+      params: args,
+    });
   }
 
   private async getGoals(args: Record<string, any>): Promise<CallToolResult> {
@@ -1365,11 +1478,15 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.goals);
+    return this.formatResponse(data.goals, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_goals',
+      params: args,
+    });
   }
 
   // Maker Group methods
-  private async getMakerGroup(id: string): Promise<CallToolResult> {
+  private async getMakerGroup(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
       query GetMakerGroup($id: ID!) {
         makerGroup(id: $id) {
@@ -1384,9 +1501,13 @@ class ProductHuntAPIMCPServer {
       }
     `;
 
-    const data = await this.executeGraphQL<{ makerGroup: ProductHuntMakerGroup }>(query, { id });
+    const data = await this.executeGraphQL<{ makerGroup: ProductHuntMakerGroup }>(query, { id: args.id });
 
-    return this.formatResponse(data.makerGroup);
+    return this.formatResponse(data.makerGroup, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_maker_group',
+      params: args,
+    });
   }
 
   private async getMakerGroups(args: Record<string, any>): Promise<CallToolResult> {
@@ -1423,11 +1544,15 @@ class ProductHuntAPIMCPServer {
       after: args.after,
     });
 
-    return this.formatResponse(data.makerGroups);
+    return this.formatResponse(data.makerGroups, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_maker_groups',
+      params: args,
+    });
   }
 
   // Viewer method (authenticated user)
-  private async getViewer(): Promise<CallToolResult> {
+  private async getViewer(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
       query GetViewer {
         viewer {
@@ -1464,7 +1589,11 @@ class ProductHuntAPIMCPServer {
 
     const data = await this.executeGraphQL<{ viewer: any }>(query);
 
-    return this.formatResponse(data.viewer);
+    return this.formatResponse(data.viewer, {
+      rawDataSaveDir: args.raw_data_save_dir,
+      toolName: 'get_viewer',
+      params: args,
+    });
   }
 
   async run(): Promise<void> {
