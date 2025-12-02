@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
+    "@yilin-jing/mcp-json-utils": "^1.0.0",
     "axios": "^1.11.0",
     "https-proxy-agent": "^7.0.6"
   },

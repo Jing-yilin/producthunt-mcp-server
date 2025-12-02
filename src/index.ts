@@ -12,7 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { JsonResponseHandler } from './jsonUtils.js';
+import { JsonResponseHandler } from '@yilin-jing/mcp-json-utils';
 
 /**
  * Interface definitions for Product Hunt GraphQL API responses
