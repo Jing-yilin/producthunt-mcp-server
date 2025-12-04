@@ -1,7 +1,7 @@
 {
   "name": "@yilin-jing/producthunt-mcp",
-  "version": "1.1.2",
-  "description": "MCP server for Product Hunt API v2 - Access Product Hunt data through GraphQL interface",
+  "version": "1.2.0",
+  "description": "MCP server for Product Hunt API v2 - Returns cleaned data in TOON format for token efficiency",
   "author": "yilin",
   "license": "MIT",
   "main": "build/index.js",
@@ -35,14 +35,16 @@
     "posts",
     "products",
     "startups",
-    "npx"
+    "npx",
+    "toon",
+    "token-efficient"
   ],
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
-    "@yilin-jing/mcp-json-utils": "^1.0.0",
+    "@toon-format/toon": "^2.0.1",
     "axios": "^1.11.0",
     "https-proxy-agent": "^7.0.6"
   },

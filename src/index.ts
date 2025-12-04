@@ -12,143 +12,134 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { JsonResponseHandler } from '@yilin-jing/mcp-json-utils';
+import { encode } from '@toon-format/toon';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
- * Interface definitions for Product Hunt GraphQL API responses
+ * Data cleaners for Product Hunt entities
+ * Removes noise and keeps only useful fields for agents
  */
-interface ProductHuntPost {
-  id: string;
-  slug: string;
-  name: string;
-  tagline: string;
-  description?: string;
-  url: string;
-  votesCount: number;
-  commentsCount: number;
-  reviewsRating?: number;
-  featuredAt?: string;
-  createdAt: string;
-  website?: string;
-  thumbnail?: {
-    url: string;
-  };
-  media?: Array<{
-    type: string;
-    url: string;
-  }>;
-  topics?: {
-    edges: Array<{
-      node: {
-        id: string;
-        name: string;
-        slug: string;
-      };
-    }>;
-  };
-  makers?: Array<{
-    id: string;
-    name: string;
-    username: string;
-  }>;
-  user?: {
-    id: string;
-    name: string;
-    username: string;
-  };
-}
+const DataCleaners = {
+  cleanPost(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      slug: raw.slug,
+      name: raw.name,
+      tagline: raw.tagline,
+      description: raw.description?.substring(0, 300),
+      url: raw.url,
+      website: raw.website,
+      votes: raw.votesCount,
+      comments: raw.commentsCount,
+      rating: raw.reviewsRating,
+      featuredAt: raw.featuredAt,
+      createdAt: raw.createdAt,
+      thumbnail: raw.thumbnail?.url,
+      topics: raw.topics?.edges?.map((e: any) => e.node?.name).filter(Boolean) || [],
+      makers: raw.makers?.filter((m: any) => m.name !== '[REDACTED]').map((m: any) => m.name) || [],
+      hunter: raw.user?.name,
+    };
+  },
 
-interface ProductHuntCollection {
-  id: string;
-  name: string;
-  description?: string;
-  followersCount: number;
-  postsCount?: number;
-  coverImage?: string;
-  createdAt: string;
-  user?: {
-    id: string;
-    name: string;
-    username: string;
-  };
-}
+  cleanPostListItem(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      slug: raw.slug,
+      name: raw.name,
+      tagline: raw.tagline,
+      votes: raw.votesCount,
+      comments: raw.commentsCount,
+      featuredAt: raw.featuredAt,
+      topics: raw.topics?.edges?.slice(0, 3).map((e: any) => e.node?.name).filter(Boolean) || [],
+    };
+  },
 
-interface ProductHuntUser {
-  id: string;
-  username: string;
-  name: string;
-  headline?: string;
-  profileImage?: string;
-  coverImage?: string;
-  websiteUrl?: string;
-  twitterUsername?: string;
-  followersCount?: number;
-  followingCount?: number;
-  isMaker?: boolean;
-  madePosts?: {
-    totalCount: number;
-  };
-  votedPosts?: {
-    totalCount: number;
-  };
-}
+  cleanCollection(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      name: raw.name,
+      description: raw.description?.substring(0, 200),
+      followers: raw.followersCount,
+      postsCount: raw.postsCount || raw.posts?.totalCount,
+      createdAt: raw.createdAt,
+      curator: raw.user?.name,
+    };
+  },
 
-interface ProductHuntTopic {
-  id: string;
-  slug: string;
-  name: string;
-  description?: string;
-  followersCount: number;
-  postsCount: number;
-}
+  cleanUser(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      username: raw.username,
+      name: raw.name,
+      headline: raw.headline,
+      profileImage: raw.profileImage,
+      website: raw.websiteUrl,
+      twitter: raw.twitterUsername,
+      followers: raw.followersCount,
+      following: raw.followingCount,
+      isMaker: raw.isMaker,
+      madePostsCount: raw.madePosts?.totalCount,
+      votedPostsCount: raw.votedPosts?.totalCount,
+    };
+  },
 
-interface ProductHuntComment {
-  id: string;
-  body: string;
-  votesCount: number;
-  createdAt: string;
-  user?: {
-    id: string;
-    name: string;
-    username: string;
-  };
-  replies?: {
-    totalCount: number;
-  };
-}
+  cleanTopic(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      slug: raw.slug,
+      name: raw.name,
+      description: raw.description?.substring(0, 150),
+      followers: raw.followersCount,
+      posts: raw.postsCount,
+    };
+  },
 
-interface ProductHuntGoal {
-  id: string;
-  title: string;
-  dueAt?: string;
-  completedAt?: string;
-  isCompleted: boolean;
-  cheersCount: number;
-  focusedDuration?: number;
-  user?: {
-    id: string;
-    name: string;
-    username: string;
-  };
-  makerGroup?: {
-    id: string;
-    name: string;
-  };
-  project?: {
-    id: string;
-    name: string;
-  };
-}
+  cleanComment(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      body: raw.body?.substring(0, 300),
+      votes: raw.votesCount,
+      createdAt: raw.createdAt,
+      author: raw.user?.name,
+      repliesCount: raw.replies?.totalCount,
+    };
+  },
 
-interface ProductHuntMakerGroup {
-  id: string;
-  name: string;
-  tagline?: string;
-  description?: string;
-  membersCount: number;
-  goalsCount: number;
-  createdAt: string;
-}
+  cleanGoal(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      title: raw.title,
+      dueAt: raw.dueAt,
+      isCompleted: raw.isCompleted,
+      completedAt: raw.completedAt,
+      cheers: raw.cheersCount,
+      user: raw.user?.name,
+      group: raw.makerGroup?.name,
+      project: raw.project?.name,
+    };
+  },
+
+  cleanMakerGroup(raw: any): any {
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      name: raw.name,
+      tagline: raw.tagline,
+      description: raw.description?.substring(0, 150),
+      members: raw.membersCount,
+      goals: raw.goalsCount,
+      createdAt: raw.createdAt,
+    };
+  },
+};
 
 interface PageInfo {
   hasNextPage: boolean;
@@ -159,16 +150,12 @@ interface PageInfo {
 
 interface GraphQLResponse<T> {
   data?: T;
-  errors?: Array<{
-    message: string;
-    locations?: Array<{ line: number; column: number }>;
-    path?: string[];
-  }>;
+  errors?: Array<{ message: string }>;
 }
 
 /**
  * Product Hunt API MCP Server
- * Provides access to Product Hunt data through GraphQL API v2
+ * Returns cleaned data in TOON format for token efficiency
  */
 class ProductHuntAPIMCPServer {
   private server: Server;
@@ -176,32 +163,19 @@ class ProductHuntAPIMCPServer {
   private accessToken: string;
 
   constructor() {
-    // Get access token from environment
     this.accessToken = process.env.PRODUCTHUNT_ACCESS_TOKEN || process.env.PH_ACCESS_TOKEN || '';
 
     this.server = new Server(
-      {
-        name: 'producthunt-mcp-server',
-        version: '1.0.0',
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      }
+      { name: 'producthunt-mcp-server', version: '1.2.0' },
+      { capabilities: { tools: {} } }
     );
 
-    // Configure axios client with proxy support
     const axiosConfig: AxiosRequestConfig = {
       baseURL: 'https://api.producthunt.com/v2/api',
       timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'ProductHunt-MCP-Server/1.0.0'
-      }
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'ProductHunt-MCP-Server/1.2.0' }
     };
 
-    // Proxy support for enterprise environments
     const proxyUrl = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
     if (proxyUrl) {
       axiosConfig.httpsAgent = new HttpsProxyAgent(proxyUrl);
@@ -209,1493 +183,705 @@ class ProductHuntAPIMCPServer {
     }
 
     this.apiClient = axios.create(axiosConfig);
-
     this.setupToolHandlers();
   }
 
   private setupToolHandlers(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [
-          // Post endpoints
-          {
-            name: 'get_post',
-            description: 'Get a Product Hunt post by ID or slug',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'Post ID',
-                },
-                slug: {
-                  type: 'string',
-                  description: 'Post slug (URL-friendly name)',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: [
+        {
+          name: 'get_post',
+          description: 'Get a Product Hunt post by ID or slug. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Post ID' },
+              slug: { type: 'string', description: 'Post slug' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-          {
-            name: 'get_posts',
-            description: 'Get Product Hunt posts with filtering and ordering options',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                featured: {
-                  type: 'boolean',
-                  description: 'Filter by featured posts only',
-                },
-                topic: {
-                  type: 'string',
-                  description: 'Filter by topic slug',
-                },
-                postedAfter: {
-                  type: 'string',
-                  description: 'Filter posts after this date (ISO 8601 format)',
-                },
-                postedBefore: {
-                  type: 'string',
-                  description: 'Filter posts before this date (ISO 8601 format)',
-                },
-                order: {
-                  type: 'string',
-                  description: 'Order by: FEATURED_AT, NEWEST, RANKING, VOTES',
-                  enum: ['FEATURED_AT', 'NEWEST', 'RANKING', 'VOTES'],
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of posts to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination (endCursor from previous response)',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_posts',
+          description: 'Get Product Hunt posts with filters. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              featured: { type: 'boolean', description: 'Filter featured posts only' },
+              topic: { type: 'string', description: 'Filter by topic slug' },
+              postedAfter: { type: 'string', description: 'Filter after date (ISO 8601)' },
+              postedBefore: { type: 'string', description: 'Filter before date (ISO 8601)' },
+              order: { type: 'string', description: 'Order: FEATURED_AT, NEWEST, RANKING, VOTES', enum: ['FEATURED_AT', 'NEWEST', 'RANKING', 'VOTES'] },
+              first: { type: 'integer', description: 'Number of posts (default: 10, max: 20)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items to return (default: 10)', default: 10 },
             },
-          } as Tool,
-          {
-            name: 'search_posts',
-            description: 'Search Product Hunt posts by query',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                query: {
-                  type: 'string',
-                  description: 'Search query',
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of posts to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: ['query'],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'search_posts',
+          description: 'Search Product Hunt posts. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Search query' },
+              first: { type: 'integer', description: 'Number of posts (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items to return (default: 10)', default: 10 },
             },
-          } as Tool,
-
-          // Collection endpoints
-          {
-            name: 'get_collection',
-            description: 'Get a Product Hunt collection by ID',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'Collection ID',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: ['id'],
+            required: ['query'],
+          },
+        } as Tool,
+        {
+          name: 'get_collection',
+          description: 'Get a Product Hunt collection by ID. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Collection ID' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-          {
-            name: 'get_collections',
-            description: 'Get Product Hunt collections with filtering options',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                featured: {
-                  type: 'boolean',
-                  description: 'Filter by featured collections only',
-                },
-                userId: {
-                  type: 'string',
-                  description: 'Filter by user ID',
-                },
-                postId: {
-                  type: 'string',
-                  description: 'Filter by post ID (collections containing this post)',
-                },
-                order: {
-                  type: 'string',
-                  description: 'Order by: FEATURED_AT, FOLLOWERS_COUNT, NEWEST',
-                  enum: ['FEATURED_AT', 'FOLLOWERS_COUNT', 'NEWEST'],
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of collections to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: ['id'],
+          },
+        } as Tool,
+        {
+          name: 'get_collections',
+          description: 'Get Product Hunt collections. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              featured: { type: 'boolean', description: 'Filter featured only' },
+              userId: { type: 'string', description: 'Filter by user ID' },
+              postId: { type: 'string', description: 'Filter by post ID' },
+              order: { type: 'string', description: 'Order: FEATURED_AT, FOLLOWERS_COUNT, NEWEST', enum: ['FEATURED_AT', 'FOLLOWERS_COUNT', 'NEWEST'] },
+              first: { type: 'integer', description: 'Number to return (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items (default: 10)', default: 10 },
             },
-          } as Tool,
-
-          // User endpoints
-          {
-            name: 'get_user',
-            description: 'Get a Product Hunt user by ID or username',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'User ID',
-                },
-                username: {
-                  type: 'string',
-                  description: 'Username',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_user',
+          description: 'Get a Product Hunt user by ID or username. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'User ID' },
+              username: { type: 'string', description: 'Username' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-          {
-            name: 'get_user_posts',
-            description: 'Get posts made by a specific user',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                username: {
-                  type: 'string',
-                  description: 'Username',
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of posts to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: ['username'],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_user_posts',
+          description: 'Get posts made by a user. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              username: { type: 'string', description: 'Username' },
+              first: { type: 'integer', description: 'Number of posts (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items (default: 10)', default: 10 },
             },
-          } as Tool,
-          {
-            name: 'get_user_voted_posts',
-            description: 'Get posts upvoted by a specific user',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                username: {
-                  type: 'string',
-                  description: 'Username',
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of posts to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: ['username'],
+            required: ['username'],
+          },
+        } as Tool,
+        {
+          name: 'get_user_voted_posts',
+          description: 'Get posts upvoted by a user. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              username: { type: 'string', description: 'Username' },
+              first: { type: 'integer', description: 'Number of posts (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items (default: 10)', default: 10 },
             },
-          } as Tool,
-
-          // Topic endpoints
-          {
-            name: 'get_topic',
-            description: 'Get a Product Hunt topic by ID or slug',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'Topic ID',
-                },
-                slug: {
-                  type: 'string',
-                  description: 'Topic slug',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: ['username'],
+          },
+        } as Tool,
+        {
+          name: 'get_topic',
+          description: 'Get a Product Hunt topic by ID or slug. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Topic ID' },
+              slug: { type: 'string', description: 'Topic slug' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-          {
-            name: 'get_topics',
-            description: 'Get Product Hunt topics with filtering options',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                search: {
-                  type: 'string',
-                  description: 'Search topics by name',
-                },
-                order: {
-                  type: 'string',
-                  description: 'Order by: FOLLOWERS_COUNT, NEWEST',
-                  enum: ['FOLLOWERS_COUNT', 'NEWEST'],
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of topics to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_topics',
+          description: 'Get Product Hunt topics. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              search: { type: 'string', description: 'Search query' },
+              order: { type: 'string', description: 'Order: FOLLOWERS_COUNT, NEWEST, POSTS_COUNT', enum: ['FOLLOWERS_COUNT', 'NEWEST', 'POSTS_COUNT'] },
+              first: { type: 'integer', description: 'Number to return (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items (default: 10)', default: 10 },
             },
-          } as Tool,
-
-          // Comment endpoints
-          {
-            name: 'get_comment',
-            description: 'Get a Product Hunt comment by ID',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'Comment ID',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: ['id'],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_comment',
+          description: 'Get a comment by ID. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Comment ID' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-          {
-            name: 'get_post_comments',
-            description: 'Get comments on a specific post',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                postId: {
-                  type: 'string',
-                  description: 'Post ID',
-                },
-                postSlug: {
-                  type: 'string',
-                  description: 'Post slug',
-                },
-                order: {
-                  type: 'string',
-                  description: 'Order by: NEWEST, VOTES_COUNT',
-                  enum: ['NEWEST', 'VOTES_COUNT'],
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of comments to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: ['id'],
+          },
+        } as Tool,
+        {
+          name: 'get_post_comments',
+          description: 'Get comments on a post. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              postId: { type: 'string', description: 'Post ID' },
+              postSlug: { type: 'string', description: 'Post slug' },
+              order: { type: 'string', description: 'Order: NEWEST, VOTES', enum: ['NEWEST', 'VOTES'] },
+              first: { type: 'integer', description: 'Number to return (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items (default: 10)', default: 10 },
             },
-          } as Tool,
-
-          // Goal endpoints
-          {
-            name: 'get_goal',
-            description: 'Get a maker goal by ID',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'Goal ID',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: ['id'],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_goal',
+          description: 'Get a maker goal by ID. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Goal ID' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-          {
-            name: 'get_goals',
-            description: 'Get maker goals with filtering options',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                userId: {
-                  type: 'string',
-                  description: 'Filter by user ID',
-                },
-                makerGroupId: {
-                  type: 'string',
-                  description: 'Filter by maker group ID',
-                },
-                completed: {
-                  type: 'boolean',
-                  description: 'Filter by completion status',
-                },
-                order: {
-                  type: 'string',
-                  description: 'Order by: COMPLETED_AT, DUE_AT, NEWEST',
-                  enum: ['COMPLETED_AT', 'DUE_AT', 'NEWEST'],
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of goals to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: ['id'],
+          },
+        } as Tool,
+        {
+          name: 'get_goals',
+          description: 'Get maker goals. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              userId: { type: 'string', description: 'Filter by user ID' },
+              makerGroupId: { type: 'string', description: 'Filter by maker group ID' },
+              completed: { type: 'boolean', description: 'Filter by completion status' },
+              order: { type: 'string', description: 'Order: CHEERS_COUNT, NEWEST', enum: ['CHEERS_COUNT', 'NEWEST'] },
+              first: { type: 'integer', description: 'Number to return (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items (default: 10)', default: 10 },
             },
-          } as Tool,
-
-          // Maker Group endpoints
-          {
-            name: 'get_maker_group',
-            description: 'Get a maker group (Space) by ID',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'Maker Group ID',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: ['id'],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_maker_group',
+          description: 'Get a maker group by ID. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Maker group ID' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-          {
-            name: 'get_maker_groups',
-            description: 'Get maker groups (Spaces) with filtering options',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                userId: {
-                  type: 'string',
-                  description: 'Filter by user ID (groups the user is a member of)',
-                },
-                order: {
-                  type: 'string',
-                  description: 'Order by: GOALS_COUNT, LAST_ACTIVE, MEMBERS_COUNT, NEWEST',
-                  enum: ['GOALS_COUNT', 'LAST_ACTIVE', 'MEMBERS_COUNT', 'NEWEST'],
-                },
-                first: {
-                  type: 'integer',
-                  description: 'Number of groups to return (default: 10, max: 20)',
-                  default: 10,
-                },
-                after: {
-                  type: 'string',
-                  description: 'Cursor for pagination',
-                },
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: ['id'],
+          },
+        } as Tool,
+        {
+          name: 'get_maker_groups',
+          description: 'Get maker groups. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              userId: { type: 'string', description: 'Filter by user ID' },
+              order: { type: 'string', description: 'Order: MEMBERS_COUNT, NEWEST', enum: ['MEMBERS_COUNT', 'NEWEST'] },
+              first: { type: 'integer', description: 'Number to return (default: 10)', default: 10 },
+              after: { type: 'string', description: 'Cursor for pagination' },
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
+              max_items: { type: 'integer', description: 'Max items (default: 10)', default: 10 },
             },
-          } as Tool,
-
-          // Viewer endpoint (authenticated user)
-          {
-            name: 'get_viewer',
-            description: 'Get the authenticated user information and their data',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                raw_data_save_dir: {
-                  type: 'string',
-                  description: 'Directory path to save raw response data. If provided, full response will be saved to a JSON file in this directory.',
-                },
-                max_items: {
-                  type: 'integer',
-                  description: 'Maximum number of items to return in arrays (default: 3). Full data available via raw_data_save_dir.',
-                  default: 3,
-                },
-              },
-              required: [],
+            required: [],
+          },
+        } as Tool,
+        {
+          name: 'get_viewer',
+          description: 'Get authenticated user info. Returns cleaned data in TOON format.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              save_dir: { type: 'string', description: 'Directory to save cleaned JSON data' },
             },
-          } as Tool,
-        ],
-      };
-    });
+            required: [],
+          },
+        } as Tool,
+      ],
+    }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         const { name, arguments: args } = request.params;
-
-        if (!args) {
-          throw new McpError(ErrorCode.InvalidParams, 'Missing arguments');
-        }
+        if (!args) throw new McpError(ErrorCode.InvalidParams, 'Missing arguments');
 
         switch (name) {
-          // Post endpoints
-          case 'get_post':
-            return await this.getPost(args as Record<string, any>);
-          case 'get_posts':
-            return await this.getPosts(args as Record<string, any>);
-          case 'search_posts':
-            return await this.searchPosts(args as Record<string, any>);
-
-          // Collection endpoints
-          case 'get_collection':
-            return await this.getCollection(args as Record<string, any>);
-          case 'get_collections':
-            return await this.getCollections(args as Record<string, any>);
-
-          // User endpoints
-          case 'get_user':
-            return await this.getUser(args as Record<string, any>);
-          case 'get_user_posts':
-            return await this.getUserPosts(args as Record<string, any>);
-          case 'get_user_voted_posts':
-            return await this.getUserVotedPosts(args as Record<string, any>);
-
-          // Topic endpoints
-          case 'get_topic':
-            return await this.getTopic(args as Record<string, any>);
-          case 'get_topics':
-            return await this.getTopics(args as Record<string, any>);
-
-          // Comment endpoints
-          case 'get_comment':
-            return await this.getComment(args as Record<string, any>);
-          case 'get_post_comments':
-            return await this.getPostComments(args as Record<string, any>);
-
-          // Goal endpoints
-          case 'get_goal':
-            return await this.getGoal(args as Record<string, any>);
-          case 'get_goals':
-            return await this.getGoals(args as Record<string, any>);
-
-          // Maker Group endpoints
-          case 'get_maker_group':
-            return await this.getMakerGroup(args as Record<string, any>);
-          case 'get_maker_groups':
-            return await this.getMakerGroups(args as Record<string, any>);
-
-          // Viewer endpoint
-          case 'get_viewer':
-            return await this.getViewer(args as Record<string, any>);
-
-          default:
-            throw new McpError(
-              ErrorCode.MethodNotFound,
-              `Unknown tool: ${name}`
-            );
+          case 'get_post': return await this.getPost(args as Record<string, any>);
+          case 'get_posts': return await this.getPosts(args as Record<string, any>);
+          case 'search_posts': return await this.searchPosts(args as Record<string, any>);
+          case 'get_collection': return await this.getCollection(args as Record<string, any>);
+          case 'get_collections': return await this.getCollections(args as Record<string, any>);
+          case 'get_user': return await this.getUser(args as Record<string, any>);
+          case 'get_user_posts': return await this.getUserPosts(args as Record<string, any>);
+          case 'get_user_voted_posts': return await this.getUserVotedPosts(args as Record<string, any>);
+          case 'get_topic': return await this.getTopic(args as Record<string, any>);
+          case 'get_topics': return await this.getTopics(args as Record<string, any>);
+          case 'get_comment': return await this.getComment(args as Record<string, any>);
+          case 'get_post_comments': return await this.getPostComments(args as Record<string, any>);
+          case 'get_goal': return await this.getGoal(args as Record<string, any>);
+          case 'get_goals': return await this.getGoals(args as Record<string, any>);
+          case 'get_maker_group': return await this.getMakerGroup(args as Record<string, any>);
+          case 'get_maker_groups': return await this.getMakerGroups(args as Record<string, any>);
+          case 'get_viewer': return await this.getViewer(args as Record<string, any>);
+          default: throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
         }
       } catch (error) {
-        if (error instanceof McpError) {
-          throw error;
-        }
-
-        const message = error instanceof Error ? error.message : 'Unknown error occurred';
+        if (error instanceof McpError) throw error;
+        const message = error instanceof Error ? error.message : 'Unknown error';
         throw new McpError(ErrorCode.InternalError, `Product Hunt API error: ${message}`);
       }
     });
   }
 
   private async executeGraphQL<T>(query: string, variables?: Record<string, any>): Promise<T> {
+    const config: AxiosRequestConfig = { headers: {} };
+    if (this.accessToken && config.headers) {
+      config.headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await this.apiClient.post<GraphQLResponse<T>>('/graphql', { query, variables }, config);
+
+    if (response.data.errors?.length) {
+      throw new Error(`GraphQL: ${response.data.errors.map(e => e.message).join('; ')}`);
+    }
+    if (!response.data.data) throw new Error('No data returned');
+    return response.data.data;
+  }
+
+  private saveData(data: any, dir: string, toolName: string): string {
     try {
-      const config: AxiosRequestConfig = {
-        headers: {},
-      };
-
-      // Add access token if available
-      if (this.accessToken && config.headers) {
-        config.headers['Authorization'] = `Bearer ${this.accessToken}`;
-      }
-
-      const response = await this.apiClient.post<GraphQLResponse<T>>(
-        '/graphql',
-        { query, variables },
-        config
-      );
-
-      if (response.data.errors && response.data.errors.length > 0) {
-        const errorMessages = response.data.errors.map(e => e.message).join('; ');
-        throw new Error(`GraphQL errors: ${errorMessages}`);
-      }
-
-      if (!response.data.data) {
-        throw new Error('No data returned from API');
-      }
-
-      return response.data.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const statusCode = error.response?.status || 500;
-        const errorMessage = error.response?.data?.errors?.[0]?.message ||
-                           error.response?.data?.message ||
-                           error.message;
-        throw new Error(`Product Hunt API error (${statusCode}): ${errorMessage}`);
-      }
-      throw error;
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const filename = `${toolName}_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      const filepath = path.join(dir, filename);
+      fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+      return filepath;
+    } catch (e) {
+      return `Error saving: ${e}`;
     }
   }
 
-  // JSON response handler for formatting and limiting responses (default: 3 items)
-  private jsonHandler = new JsonResponseHandler();
+  private formatResponse(cleanedData: any, options: { saveDir?: string; toolName?: string; pagination?: any }): CallToolResult {
+    const output: any = { data: cleanedData };
+    if (options.pagination) {
+      output.pagination = {
+        hasNextPage: options.pagination.hasNextPage,
+        endCursor: options.pagination.endCursor,
+        total: options.pagination.totalCount,
+      };
+    }
 
-  /**
-   * Format response using the JSON handler
-   */
-  private formatResponse(data: any, options?: { rawDataSaveDir?: string; toolName?: string; params?: Record<string, any>; maxItems?: number }): CallToolResult {
-    return this.jsonHandler.formatResponse(data, options);
+    let savedPath = '';
+    if (options.saveDir && options.toolName) {
+      savedPath = this.saveData(output, options.saveDir, options.toolName);
+    }
+
+    let text = encode(output);
+    if (savedPath) text += `\n\n[Cleaned data saved to: ${savedPath}]`;
+
+    return { content: [{ type: 'text', text }] };
   }
 
   // Post methods
   private async getPost(args: Record<string, any>): Promise<CallToolResult> {
-    if (!args.id && !args.slug) {
-      throw new Error('At least one of id or slug is required');
-    }
+    if (!args.id && !args.slug) throw new Error('At least one of id or slug is required');
 
     const query = `
-      query GetPost($id: ID, $slug: String) {
+      query($id: ID, $slug: String) {
         post(id: $id, slug: $slug) {
-          id
-          slug
-          name
-          tagline
-          description
-          url
-          votesCount
-          commentsCount
-          reviewsRating
-          featuredAt
-          createdAt
-          website
-          thumbnail {
-            url
-          }
-          media {
-            type
-            url
-          }
-          topics {
-            edges {
-              node {
-                id
-                name
-                slug
-              }
-            }
-          }
-          makers {
-            id
-            name
-            username
-          }
-          user {
-            id
-            name
-            username
-          }
+          id slug name tagline description url votesCount commentsCount reviewsRating featuredAt createdAt website
+          thumbnail { url }
+          topics { edges { node { id name slug } } }
+          makers { id name username }
+          user { id name username }
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ post: ProductHuntPost }>(query, {
-      id: args.id,
-      slug: args.slug,
-    });
-
-    return this.formatResponse(data.post, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_post',
-      params: args,
-    });
+    const data = await this.executeGraphQL<{ post: any }>(query, { id: args.id, slug: args.slug });
+    return this.formatResponse(DataCleaners.cleanPost(data.post), { saveDir: args.save_dir, toolName: 'get_post' });
   }
 
   private async getPosts(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetPosts($featured: Boolean, $topic: String, $postedAfter: DateTime, $postedBefore: DateTime, $order: PostsOrder, $first: Int, $after: String) {
+      query($featured: Boolean, $topic: String, $postedAfter: DateTime, $postedBefore: DateTime, $order: PostsOrder, $first: Int, $after: String) {
         posts(featured: $featured, topic: $topic, postedAfter: $postedAfter, postedBefore: $postedBefore, order: $order, first: $first, after: $after) {
-          edges {
-            cursor
-            node {
-              id
-              slug
-              name
-              tagline
-              url
-              votesCount
-              commentsCount
-              featuredAt
-              createdAt
-              thumbnail {
-                url
-              }
-              topics {
-                edges {
-                  node {
-                    id
-                    name
-                    slug
-                  }
-                }
-              }
-              makers {
-                id
-                name
-                username
-              }
-            }
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
+          edges { node { id slug name tagline votesCount commentsCount featuredAt createdAt topics { edges { node { name } } } } }
+          pageInfo { hasNextPage endCursor }
           totalCount
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ posts: { edges: Array<{ cursor: string; node: ProductHuntPost }>; pageInfo: PageInfo; totalCount: number } }>(query, {
-      featured: args.featured,
-      topic: args.topic,
-      postedAfter: args.postedAfter,
-      postedBefore: args.postedBefore,
-      order: args.order,
-      first: args.first || 10,
-      after: args.after,
+    const data = await this.executeGraphQL<{ posts: any }>(query, {
+      featured: args.featured, topic: args.topic, postedAfter: args.postedAfter, postedBefore: args.postedBefore,
+      order: args.order, first: args.first || 10, after: args.after,
     });
 
-    return this.formatResponse(data.posts, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_posts',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = data.posts.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanPostListItem(e.node));
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_posts',
+      pagination: { ...data.posts.pageInfo, totalCount: data.posts.totalCount },
     });
   }
 
   private async searchPosts(args: Record<string, any>): Promise<CallToolResult> {
-    // Product Hunt doesn't have a direct search query, so we use posts with topic filter
-    // For a more comprehensive search, we'd need to use a different approach
     const query = `
-      query SearchPosts($first: Int, $after: String) {
+      query($first: Int, $after: String) {
         posts(order: RANKING, first: $first, after: $after) {
-          edges {
-            cursor
-            node {
-              id
-              slug
-              name
-              tagline
-              url
-              votesCount
-              commentsCount
-              featuredAt
-              createdAt
-              thumbnail {
-                url
-              }
-              topics {
-                edges {
-                  node {
-                    id
-                    name
-                    slug
-                  }
-                }
-              }
-            }
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
+          edges { node { id slug name tagline votesCount commentsCount featuredAt topics { edges { node { name } } } } }
+          pageInfo { hasNextPage endCursor }
           totalCount
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ posts: { edges: Array<{ cursor: string; node: ProductHuntPost }>; pageInfo: PageInfo; totalCount: number } }>(query, {
-      first: args.first || 10,
-      after: args.after,
-    });
+    const data = await this.executeGraphQL<{ posts: any }>(query, { first: args.first || 20, after: args.after });
 
-    // Filter results by search query on client side
     const searchQuery = (args.query as string).toLowerCase();
-    const filteredEdges = data.posts.edges.filter(edge =>
-      edge.node.name.toLowerCase().includes(searchQuery) ||
-      edge.node.tagline.toLowerCase().includes(searchQuery)
+    const filtered = data.posts.edges.filter((e: any) =>
+      e.node.name.toLowerCase().includes(searchQuery) || e.node.tagline.toLowerCase().includes(searchQuery)
     );
 
-    return this.formatResponse({
-      ...data.posts,
-      edges: filteredEdges,
-      searchQuery: args.query,
-    }, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'search_posts',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = filtered.slice(0, maxItems).map((e: any) => DataCleaners.cleanPostListItem(e.node));
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'search_posts',
+      pagination: { ...data.posts.pageInfo, totalCount: filtered.length },
     });
   }
 
   // Collection methods
   private async getCollection(args: Record<string, any>): Promise<CallToolResult> {
-    if (!args.id) {
-      throw new Error('Collection ID is required');
-    }
-
     const query = `
-      query GetCollection($id: ID) {
+      query($id: ID) {
         collection(id: $id) {
-          id
-          name
-          description
-          followersCount
-          coverImage
-          createdAt
-          user {
-            id
-            name
-            username
-          }
-          posts(first: 10) {
-            totalCount
-            edges {
-              node {
-                id
-                name
-                tagline
-                slug
-              }
-            }
-          }
+          id name description followersCount coverImage createdAt
+          user { id name username }
+          posts(first: 10) { totalCount edges { node { id name tagline slug } } }
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ collection: ProductHuntCollection }>(query, {
-      id: args.id,
-    });
-
-    return this.formatResponse(data.collection, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_collection',
-      params: args,
-    });
+    const data = await this.executeGraphQL<{ collection: any }>(query, { id: args.id });
+    return this.formatResponse(DataCleaners.cleanCollection(data.collection), { saveDir: args.save_dir, toolName: 'get_collection' });
   }
 
   private async getCollections(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetCollections($featured: Boolean, $userId: ID, $postId: ID, $order: CollectionsOrder, $first: Int, $after: String) {
+      query($featured: Boolean, $userId: ID, $postId: ID, $order: CollectionsOrder, $first: Int, $after: String) {
         collections(featured: $featured, userId: $userId, postId: $postId, order: $order, first: $first, after: $after) {
-          edges {
-            cursor
-            node {
-              id
-              name
-              description
-              followersCount
-              coverImage
-              createdAt
-              user {
-                id
-                name
-                username
-              }
-            }
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
+          edges { node { id name description followersCount createdAt user { name } } }
+          pageInfo { hasNextPage endCursor }
           totalCount
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ collections: { edges: Array<{ cursor: string; node: ProductHuntCollection }>; pageInfo: PageInfo; totalCount: number } }>(query, {
-      featured: args.featured,
-      userId: args.userId,
-      postId: args.postId,
-      order: args.order,
-      first: args.first || 10,
-      after: args.after,
+    const data = await this.executeGraphQL<{ collections: any }>(query, {
+      featured: args.featured, userId: args.userId, postId: args.postId, order: args.order, first: args.first || 10, after: args.after,
     });
 
-    return this.formatResponse(data.collections, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_collections',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = data.collections.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanCollection(e.node));
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_collections',
+      pagination: { ...data.collections.pageInfo, totalCount: data.collections.totalCount },
     });
   }
 
   // User methods
   private async getUser(args: Record<string, any>): Promise<CallToolResult> {
-    if (!args.id && !args.username) {
-      throw new Error('At least one of id or username is required');
-    }
+    if (!args.id && !args.username) throw new Error('At least one of id or username is required');
 
     const query = `
-      query GetUser($id: ID, $username: String) {
+      query($id: ID, $username: String) {
         user(id: $id, username: $username) {
-          id
-          username
-          name
-          headline
-          profileImage
-          coverImage
-          websiteUrl
-          twitterUsername
-          followersCount
-          followingCount
-          isMaker
-          madePosts {
-            totalCount
-          }
-          votedPosts {
-            totalCount
-          }
+          id username name headline profileImage coverImage websiteUrl twitterUsername followersCount followingCount isMaker
+          madePosts { totalCount }
+          votedPosts { totalCount }
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ user: ProductHuntUser }>(query, {
-      id: args.id,
-      username: args.username,
-    });
-
-    return this.formatResponse(data.user, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_user',
-      params: args,
-    });
+    const data = await this.executeGraphQL<{ user: any }>(query, { id: args.id, username: args.username });
+    return this.formatResponse(DataCleaners.cleanUser(data.user), { saveDir: args.save_dir, toolName: 'get_user' });
   }
 
   private async getUserPosts(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetUserPosts($username: String!, $first: Int, $after: String) {
+      query($username: String!, $first: Int, $after: String) {
         user(username: $username) {
-          id
-          username
-          name
+          id username name
           madePosts(first: $first, after: $after) {
-            edges {
-              cursor
-              node {
-                id
-                slug
-                name
-                tagline
-                url
-                votesCount
-                commentsCount
-                featuredAt
-                createdAt
-              }
-            }
-            pageInfo {
-              hasNextPage
-              hasPreviousPage
-              startCursor
-              endCursor
-            }
+            edges { node { id slug name tagline votesCount commentsCount featuredAt createdAt } }
+            pageInfo { hasNextPage endCursor }
             totalCount
           }
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ user: ProductHuntUser & { madePosts: { edges: Array<{ cursor: string; node: ProductHuntPost }>; pageInfo: PageInfo; totalCount: number } } }>(query, {
-      username: args.username,
-      first: args.first || 10,
-      after: args.after,
-    });
+    const data = await this.executeGraphQL<{ user: any }>(query, { username: args.username, first: args.first || 10, after: args.after });
 
-    return this.formatResponse(data.user, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_user_posts',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = {
+      user: { id: data.user.id, username: data.user.username, name: data.user.name },
+      posts: data.user.madePosts.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanPostListItem(e.node)),
+    };
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_user_posts',
+      pagination: { ...data.user.madePosts.pageInfo, totalCount: data.user.madePosts.totalCount },
     });
   }
 
   private async getUserVotedPosts(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetUserVotedPosts($username: String!, $first: Int, $after: String) {
+      query($username: String!, $first: Int, $after: String) {
         user(username: $username) {
-          id
-          username
-          name
+          id username name
           votedPosts(first: $first, after: $after) {
-            edges {
-              cursor
-              node {
-                id
-                slug
-                name
-                tagline
-                url
-                votesCount
-                commentsCount
-                featuredAt
-                createdAt
-              }
-            }
-            pageInfo {
-              hasNextPage
-              hasPreviousPage
-              startCursor
-              endCursor
-            }
+            edges { node { id slug name tagline votesCount commentsCount featuredAt createdAt } }
+            pageInfo { hasNextPage endCursor }
             totalCount
           }
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ user: ProductHuntUser & { votedPosts: { edges: Array<{ cursor: string; node: ProductHuntPost }>; pageInfo: PageInfo; totalCount: number } } }>(query, {
-      username: args.username,
-      first: args.first || 10,
-      after: args.after,
-    });
+    const data = await this.executeGraphQL<{ user: any }>(query, { username: args.username, first: args.first || 10, after: args.after });
 
-    return this.formatResponse(data.user, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_user_voted_posts',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = {
+      user: { id: data.user.id, username: data.user.username, name: data.user.name },
+      posts: data.user.votedPosts.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanPostListItem(e.node)),
+    };
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_user_voted_posts',
+      pagination: { ...data.user.votedPosts.pageInfo, totalCount: data.user.votedPosts.totalCount },
     });
   }
 
   // Topic methods
   private async getTopic(args: Record<string, any>): Promise<CallToolResult> {
-    if (!args.id && !args.slug) {
-      throw new Error('At least one of id or slug is required');
-    }
+    if (!args.id && !args.slug) throw new Error('At least one of id or slug is required');
 
     const query = `
-      query GetTopic($id: ID, $slug: String) {
-        topic(id: $id, slug: $slug) {
-          id
-          slug
-          name
-          description
-          followersCount
-          postsCount
-        }
+      query($id: ID, $slug: String) {
+        topic(id: $id, slug: $slug) { id slug name description followersCount postsCount }
       }
     `;
 
-    const data = await this.executeGraphQL<{ topic: ProductHuntTopic }>(query, {
-      id: args.id,
-      slug: args.slug,
-    });
-
-    return this.formatResponse(data.topic, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_topic',
-      params: args,
-    });
+    const data = await this.executeGraphQL<{ topic: any }>(query, { id: args.id, slug: args.slug });
+    return this.formatResponse(DataCleaners.cleanTopic(data.topic), { saveDir: args.save_dir, toolName: 'get_topic' });
   }
 
   private async getTopics(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetTopics($search: String, $order: TopicsOrder, $first: Int, $after: String) {
+      query($search: String, $order: TopicsOrder, $first: Int, $after: String) {
         topics(query: $search, order: $order, first: $first, after: $after) {
-          edges {
-            cursor
-            node {
-              id
-              slug
-              name
-              description
-              followersCount
-              postsCount
-            }
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
+          edges { node { id slug name description followersCount postsCount } }
+          pageInfo { hasNextPage endCursor }
           totalCount
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ topics: { edges: Array<{ cursor: string; node: ProductHuntTopic }>; pageInfo: PageInfo; totalCount: number } }>(query, {
-      search: args.search,
-      order: args.order,
-      first: args.first || 10,
-      after: args.after,
-    });
+    const data = await this.executeGraphQL<{ topics: any }>(query, { search: args.search, order: args.order, first: args.first || 10, after: args.after });
 
-    return this.formatResponse(data.topics, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_topics',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = data.topics.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanTopic(e.node));
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_topics',
+      pagination: { ...data.topics.pageInfo, totalCount: data.topics.totalCount },
     });
   }
 
   // Comment methods
   private async getComment(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetComment($id: ID!) {
-        comment(id: $id) {
-          id
-          body
-          votesCount
-          createdAt
-          user {
-            id
-            name
-            username
-          }
-          replies {
-            totalCount
-          }
-        }
+      query($id: ID!) {
+        comment(id: $id) { id body votesCount createdAt user { id name username } replies { totalCount } }
       }
     `;
 
-    const data = await this.executeGraphQL<{ comment: ProductHuntComment }>(query, { id: args.id });
-
-    return this.formatResponse(data.comment, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_comment',
-      params: args,
-    });
+    const data = await this.executeGraphQL<{ comment: any }>(query, { id: args.id });
+    return this.formatResponse(DataCleaners.cleanComment(data.comment), { saveDir: args.save_dir, toolName: 'get_comment' });
   }
 
   private async getPostComments(args: Record<string, any>): Promise<CallToolResult> {
-    if (!args.postId && !args.postSlug) {
-      throw new Error('At least one of postId or postSlug is required');
-    }
+    if (!args.postId && !args.postSlug) throw new Error('At least one of postId or postSlug is required');
 
     const query = `
-      query GetPostComments($postId: ID, $postSlug: String, $order: CommentsOrder, $first: Int, $after: String) {
+      query($postId: ID, $postSlug: String, $order: CommentsOrder, $first: Int, $after: String) {
         post(id: $postId, slug: $postSlug) {
-          id
-          name
+          id name
           comments(order: $order, first: $first, after: $after) {
-            edges {
-              cursor
-              node {
-                id
-                body
-                votesCount
-                createdAt
-                user {
-                  id
-                  name
-                  username
-                }
-                replies {
-                  totalCount
-                }
-              }
-            }
-            pageInfo {
-              hasNextPage
-              hasPreviousPage
-              startCursor
-              endCursor
-            }
+            edges { node { id body votesCount createdAt user { name } replies { totalCount } } }
+            pageInfo { hasNextPage endCursor }
             totalCount
           }
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ post: ProductHuntPost & { comments: { edges: Array<{ cursor: string; node: ProductHuntComment }>; pageInfo: PageInfo; totalCount: number } } }>(query, {
-      postId: args.postId,
-      postSlug: args.postSlug,
-      order: args.order,
-      first: args.first || 10,
-      after: args.after,
+    const data = await this.executeGraphQL<{ post: any }>(query, {
+      postId: args.postId, postSlug: args.postSlug, order: args.order, first: args.first || 10, after: args.after,
     });
 
-    return this.formatResponse(data.post, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_post_comments',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = {
+      post: { id: data.post.id, name: data.post.name },
+      comments: data.post.comments.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanComment(e.node)),
+    };
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_post_comments',
+      pagination: { ...data.post.comments.pageInfo, totalCount: data.post.comments.totalCount },
     });
   }
 
   // Goal methods
   private async getGoal(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetGoal($id: ID!) {
+      query($id: ID!) {
         goal(id: $id) {
-          id
-          title
-          dueAt
-          completedAt
-          isCompleted
-          cheersCount
-          focusedDuration
-          user {
-            id
-            name
-            username
-          }
-          makerGroup {
-            id
-            name
-          }
-          project {
-            id
-            name
-          }
+          id title dueAt completedAt isCompleted cheersCount focusedDuration
+          user { id name username }
+          makerGroup { id name }
+          project { id name }
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ goal: ProductHuntGoal }>(query, { id: args.id });
-
-    return this.formatResponse(data.goal, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_goal',
-      params: args,
-    });
+    const data = await this.executeGraphQL<{ goal: any }>(query, { id: args.id });
+    return this.formatResponse(DataCleaners.cleanGoal(data.goal), { saveDir: args.save_dir, toolName: 'get_goal' });
   }
 
   private async getGoals(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetGoals($userId: ID, $makerGroupId: ID, $completed: Boolean, $order: GoalsOrder, $first: Int, $after: String) {
+      query($userId: ID, $makerGroupId: ID, $completed: Boolean, $order: GoalsOrder, $first: Int, $after: String) {
         goals(userId: $userId, makerGroupId: $makerGroupId, completed: $completed, order: $order, first: $first, after: $after) {
-          edges {
-            cursor
-            node {
-              id
-              title
-              dueAt
-              completedAt
-              isCompleted
-              cheersCount
-              focusedDuration
-              user {
-                id
-                name
-                username
-              }
-              makerGroup {
-                id
-                name
-              }
-            }
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
+          edges { node { id title dueAt isCompleted cheersCount user { name } makerGroup { name } } }
+          pageInfo { hasNextPage endCursor }
           totalCount
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ goals: { edges: Array<{ cursor: string; node: ProductHuntGoal }>; pageInfo: PageInfo; totalCount: number } }>(query, {
-      userId: args.userId,
-      makerGroupId: args.makerGroupId,
-      completed: args.completed,
-      order: args.order,
-      first: args.first || 10,
-      after: args.after,
+    const data = await this.executeGraphQL<{ goals: any }>(query, {
+      userId: args.userId, makerGroupId: args.makerGroupId, completed: args.completed, order: args.order, first: args.first || 10, after: args.after,
     });
 
-    return this.formatResponse(data.goals, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_goals',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = data.goals.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanGoal(e.node));
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_goals',
+      pagination: { ...data.goals.pageInfo, totalCount: data.goals.totalCount },
     });
   }
 
   // Maker Group methods
   private async getMakerGroup(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetMakerGroup($id: ID!) {
-        makerGroup(id: $id) {
-          id
-          name
-          tagline
-          description
-          membersCount
-          goalsCount
-          createdAt
-        }
+      query($id: ID!) {
+        makerGroup(id: $id) { id name tagline description membersCount goalsCount createdAt }
       }
     `;
 
-    const data = await this.executeGraphQL<{ makerGroup: ProductHuntMakerGroup }>(query, { id: args.id });
-
-    return this.formatResponse(data.makerGroup, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_maker_group',
-      params: args,
-    });
+    const data = await this.executeGraphQL<{ makerGroup: any }>(query, { id: args.id });
+    return this.formatResponse(DataCleaners.cleanMakerGroup(data.makerGroup), { saveDir: args.save_dir, toolName: 'get_maker_group' });
   }
 
   private async getMakerGroups(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetMakerGroups($userId: ID, $order: MakerGroupsOrder, $first: Int, $after: String) {
+      query($userId: ID, $order: MakerGroupsOrder, $first: Int, $after: String) {
         makerGroups(userId: $userId, order: $order, first: $first, after: $after) {
-          edges {
-            cursor
-            node {
-              id
-              name
-              tagline
-              description
-              membersCount
-              goalsCount
-              createdAt
-            }
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
+          edges { node { id name tagline description membersCount goalsCount createdAt } }
+          pageInfo { hasNextPage endCursor }
           totalCount
         }
       }
     `;
 
-    const data = await this.executeGraphQL<{ makerGroups: { edges: Array<{ cursor: string; node: ProductHuntMakerGroup }>; pageInfo: PageInfo; totalCount: number } }>(query, {
-      userId: args.userId,
-      order: args.order,
-      first: args.first || 10,
-      after: args.after,
-    });
+    const data = await this.executeGraphQL<{ makerGroups: any }>(query, { userId: args.userId, order: args.order, first: args.first || 10, after: args.after });
 
-    return this.formatResponse(data.makerGroups, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_maker_groups',
-      params: args,
+    const maxItems = args.max_items || 10;
+    const cleaned = data.makerGroups.edges.slice(0, maxItems).map((e: any) => DataCleaners.cleanMakerGroup(e.node));
+
+    return this.formatResponse(cleaned, {
+      saveDir: args.save_dir, toolName: 'get_maker_groups',
+      pagination: { ...data.makerGroups.pageInfo, totalCount: data.makerGroups.totalCount },
     });
   }
 
-  // Viewer method (authenticated user)
+  // Viewer method
   private async getViewer(args: Record<string, any>): Promise<CallToolResult> {
     const query = `
-      query GetViewer {
+      query {
         viewer {
-          user {
-            id
-            username
-            name
-            headline
-            profileImage
-            isMaker
-          }
-          goals(first: 5, order: NEWEST) {
-            totalCount
-            edges {
-              node {
-                id
-                title
-                isCompleted
-              }
-            }
-          }
-          makerGroups(first: 5) {
-            totalCount
-            edges {
-              node {
-                id
-                name
-              }
-            }
-          }
+          user { id username name headline profileImage isMaker }
+          goals(first: 5, order: NEWEST) { totalCount edges { node { id title isCompleted } } }
+          makerGroups(first: 5) { totalCount edges { node { id name } } }
         }
       }
     `;
 
     const data = await this.executeGraphQL<{ viewer: any }>(query);
 
-    return this.formatResponse(data.viewer, {
-      rawDataSaveDir: args.raw_data_save_dir,
-      maxItems: args.max_items,
-      toolName: 'get_viewer',
-      params: args,
-    });
+    const cleaned = {
+      user: DataCleaners.cleanUser(data.viewer.user),
+      recentGoals: data.viewer.goals?.edges?.map((e: any) => ({ id: e.node.id, title: e.node.title, isCompleted: e.node.isCompleted })) || [],
+      makerGroups: data.viewer.makerGroups?.edges?.map((e: any) => ({ id: e.node.id, name: e.node.name })) || [],
+    };
+
+    return this.formatResponse(cleaned, { saveDir: args.save_dir, toolName: 'get_viewer' });
   }
 
   async run(): Promise<void> {
